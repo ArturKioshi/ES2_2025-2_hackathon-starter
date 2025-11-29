@@ -1,0 +1,13 @@
+extends layout
+
+block head
+  - var title = '404 - Page not found'
+
+block content
+  .text-center.mt-5
+    h1.display-1.text-muted 404
+    h2.mt-3 Page not found
+    p.lead The requested page could not be found or may have moved.
+    p
+      a.btn.btn-primary(href='/') Homepage
+      a.btn.btn-outline-secondary.ms-2(href='javascript:history.back()') Back
