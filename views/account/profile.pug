@@ -45,6 +45,10 @@ block content
       .col-md-7.mb-2
         input#website.form-control(type='text', name='website', value=user.profile.website, autocomplete='url')
     .form-group.row
+      label.col-md-3.col-form-label.font-weight-bold.text-right(for='bio') Biography
+      .col-md-7.mb-2
+        textarea#biography.form-control(name='biography', rows='3')= user.profile.biography
+    .form-group.row
       label.col-md-3.col-form-label.font-weight-bold.text-right Profile Picture
       .col-sm-4.mb-2
         img.profile(src=user.profile.picture ? user.profile.picture : user.gravatar(), width='100', height='100')

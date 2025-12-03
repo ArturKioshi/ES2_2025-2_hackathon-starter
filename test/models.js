@@ -133,6 +133,28 @@ describe('User Model', () => {
     });
   });
 
+  it('should save user profile information including bio', async () => {
+    const user = new User({
+      email: 'test-profile@gmail.com',
+      password: 'password123',
+      profile: {
+        name: 'John Doe',
+        biography: 'Software Engineer Student',
+        location: 'Brazil',
+      },
+    });
+
+    const savedUser = await user.save();
+    expect(savedUser.profile.name).to.equal('John Doe');
+    expect(savedUser.profile.biography).to.equal('Software Engineer Student');
+    expect(savedUser.profile.location).to.equal('Brazil');
+
+    const foundUser = await User.findOne({ email: 'test-profile@gmail.com' });
+    expect(foundUser.profile.name).to.equal('John Doe');
+    expect(foundUser.profile.biography).to.equal('Software Engineer Student');
+    expect(foundUser.profile.location).to.equal('Brazil');
+  });
+
   it('should check password', async () => {
     const UserMock = sinon.mock(
       new User({
