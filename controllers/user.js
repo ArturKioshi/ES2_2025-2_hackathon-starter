@@ -310,6 +310,7 @@ exports.postUpdateProfile = async (req, res, next) => {
     user.profile.gender = req.body.gender || '';
     user.profile.location = req.body.location || '';
     user.profile.website = req.body.website || '';
+    user.profile.biography = req.body.biography || '';
     await user.save();
     req.flash('success', { msg: 'Profile information has been updated.' });
     res.redirect('/account');
