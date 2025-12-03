@@ -29,6 +29,10 @@ jobs:
       - name: Run tests + coverage
         run: npm test
 
+      - name: Get project version
+        id: package-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
         env:
@@ -38,4 +42,7 @@ jobs:
             -Dsonar.projectKey=ArturKioshi_ES2_2025-2_hackathon-starter
             -Dsonar.organization=arturkioshi
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.sources=.
+            -Dsonar.tests=test
+            -Dsonar.exclusions=**/*.test.js,**/test/**,coverage/**,node_modules/**
             -Dsonar.branch.name=master

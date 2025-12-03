@@ -58,3 +58,9 @@ Thumbs.db
 .Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
+
+## Test Coverage
+coverage
+coverage/
+*.lcov
+.nyc_output
