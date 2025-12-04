@@ -1,6 +1,7 @@
 const LocalStorage = require('./LocalStorage');
 // const S3Storage = require('./S3Storage');
 
+/*
 let storageProvider;
 
 if (process.env.NODE_ENV === 'production') {
@@ -9,5 +10,8 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   storageProvider = new LocalStorage();
 }
+*/
+
+const storageProvider = new LocalStorage();
 
 module.exports = storageProvider;

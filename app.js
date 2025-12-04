@@ -24,7 +24,10 @@ dotenv.config({ path: '.env.example' });
  * Set config values
  */
 const secureTransfer = process.env.BASE_URL.startsWith('https');
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
 /**
  * Rate limiting configuration
