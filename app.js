@@ -1,7 +1,7 @@
 /**
  * Module dependencies.
  */
-const path = require('path');
+const path = require('node:path');
 const express = require('express');
 const compression = require('compression');
 const session = require('express-session');
@@ -149,24 +149,23 @@ app.use((req, res, next) => {
 // Function to validate if the URL is a safe relative path
 const isSafeRedirect = (url) => /^\/[a-zA-Z0-9/_-]*$/.test(url);
 app.use((req, res, next) => {
-  // After successful login, redirect back to the intended page
-  if (!req.user && req.path !== '/login' && req.path !== '/signup' && !req.path.match(/^\/auth/) && !req.path.match(/\./)) {
+  // Definindo as condições para clareza
+  const isGuestNotOnAuthPage = !req.user && 
+    req.path !== '/login' && 
+    req.path !== '/signup' && 
+    !req.path.match(/^\/auth/) && 
+    !req.path.match(/\./);
+
+  const isUserOnSpecificPages = req.user && 
+    (req.path === '/account' || req.path.match(/^\/api/));
+  if (isGuestNotOnAuthPage || isUserOnSpecificPages) {
     const returnTo = req.originalUrl;
-    if (isSafeRedirect(returnTo)) {
-      req.session.returnTo = returnTo;
-    } else {
-      req.session.returnTo = '/';
-    }
-  } else if (req.user && (req.path === '/account' || req.path.match(/^\/api/))) {
-    const returnTo = req.originalUrl;
-    if (isSafeRedirect(returnTo)) {
-      req.session.returnTo = returnTo;
-    } else {
-      req.session.returnTo = '/';
-    }
+    req.session.returnTo = isSafeRedirect(returnTo) ? returnTo : '/';
   }
+
   next();
 });
+
 app.use('/avatars', express.static(path.join(__dirname, 'uploads')));
 app.use('/', express.static(path.join(__dirname, 'public'), { maxAge: 31557600000 }));
 app.use('/js/lib', express.static(path.join(__dirname, 'node_modules/chart.js/dist'), { maxAge: 31557600000 }));
