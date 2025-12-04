@@ -5,6 +5,7 @@ const mailChecker = require('mailchecker');
 const User = require('../models/User');
 const Session = require('../models/Session');
 const nodemailerConfig = require('../config/nodemailer');
+const storage = require('../providers/storage');
 
 /**
  * GET /login
@@ -311,6 +312,17 @@ exports.postUpdateProfile = async (req, res, next) => {
     user.profile.location = req.body.location || '';
     user.profile.website = req.body.website || '';
     user.profile.biography = req.body.biography || '';
+
+    if (req.file) {
+      if (user.profile.picture && user.profile.picture.startsWith('/avatars')) {
+        await storage.delete(user.profile.picture);
+      }
+
+      const folderPath = `profiles/${user.id}`;
+      const publicUrl = await storage.save(req.file.buffer, `avatar-${Date.now()}.png`, folderPath);
+      user.profile.picture = publicUrl;
+    }
+
     await user.save();
     req.flash('success', { msg: 'Profile information has been updated.' });
     res.redirect('/account');
