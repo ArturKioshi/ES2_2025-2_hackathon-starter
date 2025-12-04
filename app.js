@@ -149,14 +149,9 @@ app.use((req, res, next) => {
 // Function to validate if the URL is a safe relative path
 const isSafeRedirect = (url) => /^\/[a-zA-Z0-9/_-]*$/.test(url);
 app.use((req, res, next) => {
-  const isGuestNotOnAuthPage = !req.user && 
-    req.path !== '/login' && 
-    req.path !== '/signup' && 
-    !req.path.match(/^\/auth/) && 
-    !req.path.match(/\./);
+  const isGuestNotOnAuthPage = !req.user && req.path !== '/login' && req.path !== '/signup' && !req.path.match(/^\/auth/) && !req.path.match(/\./);
 
-  const isUserOnSpecificPages = req.user && 
-    (req.path === '/account' || req.path.match(/^\/api/));
+  const isUserOnSpecificPages = req.user && (req.path === '/account' || req.path.match(/^\/api/));
   if (isGuestNotOnAuthPage || isUserOnSpecificPages) {
     const returnTo = req.originalUrl;
     req.session.returnTo = isSafeRedirect(returnTo) ? returnTo : '/';
@@ -261,18 +256,14 @@ app.post('/ai/rag/ask', aiController.postRagAsk);
 app.get('/auth/failure', (req, res) => {
   // Check if a flash message for 'errors' already exists in the session (do not consume it)
   const hasErrorFlash = req.session?.flash?.errors?.length > 0;
-  
+
   if (!hasErrorFlash) {
     req.flash('errors', { msg: 'Authentication failed or provider account is already linked.' });
   }
   const { returnTo } = req.session;
   req.session.returnTo = undefined;
   // Prevent infinite loop: if returnTo is the current URL or an /auth/ route, redirect to /
-  if (!returnTo || 
-      !isSafeRedirect(returnTo) || 
-      returnTo === req.originalUrl || 
-      returnTo.startsWith('/auth/')) { 
-
+  if (!returnTo || !isSafeRedirect(returnTo) || returnTo === req.originalUrl || returnTo.startsWith('/auth/')) {
     res.redirect('/');
   } else {
     res.redirect(returnTo);
