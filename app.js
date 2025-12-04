@@ -261,8 +261,8 @@ app.post('/ai/rag/ask', aiController.postRagAsk);
  */
 app.get('/auth/failure', (req, res) => {
   // Check if a flash message for 'errors' already exists in the session (do not consume it)
-  const hasErrorFlash = req.session && req.session.flash && req.session.flash.errors && req.session.flash.errors.length > 0;
-
+  const hasErrorFlash = req.session?.flash?.errors?.length > 0;
+  
   if (!hasErrorFlash) {
     req.flash('errors', { msg: 'Authentication failed or provider account is already linked.' });
   }
