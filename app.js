@@ -149,7 +149,6 @@ app.use((req, res, next) => {
 // Function to validate if the URL is a safe relative path
 const isSafeRedirect = (url) => /^\/[a-zA-Z0-9/_-]*$/.test(url);
 app.use((req, res, next) => {
-  // Definindo as condições para clareza
   const isGuestNotOnAuthPage = !req.user && 
     req.path !== '/login' && 
     req.path !== '/signup' && 
@@ -269,7 +268,11 @@ app.get('/auth/failure', (req, res) => {
   const { returnTo } = req.session;
   req.session.returnTo = undefined;
   // Prevent infinite loop: if returnTo is the current URL or an /auth/ route, redirect to /
-  if (!returnTo || !isSafeRedirect(returnTo) || returnTo === req.originalUrl || /^\/auth\//.test(returnTo)) {
+  if (!returnTo || 
+      !isSafeRedirect(returnTo) || 
+      returnTo === req.originalUrl || 
+      returnTo.startsWith('/auth/')) { 
+
     res.redirect('/');
   } else {
     res.redirect(returnTo);
@@ -352,7 +355,7 @@ if (process.env.NODE_ENV === 'development') {
 app.listen(app.get('port'), () => {
   const { BASE_URL } = process.env;
   const colonIndex = BASE_URL.lastIndexOf(':');
-  const port = parseInt(BASE_URL.slice(colonIndex + 1), 10);
+  const port = Number.parseInt(BASE_URL.slice(colonIndex + 1), 10);
 
   if (!BASE_URL.startsWith('http://localhost')) {
     console.log(
