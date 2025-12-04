@@ -377,7 +377,7 @@ exports.getSteam = async (req, res, next) => {
   };
   // get the list of the recently played games, pick the most recent one and get its achievements
   const getPlayerAchievements = async () => {
-    const recentGamesURL = makeURL('http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/', params);
+    const recentGamesURL = makeURL('https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/', params);
     try {
       const response = await fetch(recentGamesURL);
       if (!response.ok) {
@@ -393,7 +393,7 @@ exports.getSteam = async (req, res, next) => {
         return null;
       }
       params.appid = responseData.response.games[0].appid;
-      const achievementsURL = makeURL('http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/', params);
+      const achievementsURL = makeURL('https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/', params);
       const achievementsResponse = await fetch(achievementsURL);
       if (!achievementsResponse.ok) {
         // handle private profile or invalid key
@@ -417,7 +417,7 @@ exports.getSteam = async (req, res, next) => {
   };
   const getPlayerSummaries = async () => {
     params.steamids = steamId;
-    const url = makeURL('http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/', params);
+    const url = makeURL('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/', params);
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -435,7 +435,7 @@ exports.getSteam = async (req, res, next) => {
   const getOwnedGames = async () => {
     params.include_appinfo = 1;
     params.include_played_free_games = 1;
-    const url = makeURL('http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/', params);
+    const url = makeURL('https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/', params);
     try {
       const response = await fetch(url);
       if (!response.ok) {
