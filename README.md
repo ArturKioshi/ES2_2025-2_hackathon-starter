@@ -14,6 +14,44 @@ Abaixo estão listados os integrantes do grupo e seus respectivos perfis no GitH
 - [Pedro Marchi Nunes](https://github.com/PedroMarchiN)
 - [Leonardo Ryuiti Miasiro](https://github.com/LeonardoMiasiro)
 
+
+## I - Relatório de Cobertura de Código dos Testes Automatizados Existentes
+
+Esta seção documenta a geração dos relatórios de cobertura de código dos testes automatizados existentes, utilizando a biblioteca **c8** integrada ao **Mocha** que já estava no projeto.
+
+### Como Gerar o Relatório
+
+Basta utilizar o comando abaixo:
+
+```bash
+npm test
+```
+
+O relatório HTML detalhado será gerado automaticamente no diretório:
+`tmp/coverage/index.html`
+
+### Resultados Atuais
+
+Abaixo estão os resultados da execução atual, evidenciando as métricas Branches, Functions e Lines.
+
+**1. Visão Geral do Projeto**
+A cobertura global atual é de aproximadamente **36%** nas instruções.
+
+![Visão Geral da Cobertura](images-readme/geral.png)
+
+**2. Detalhamento: Controllers**
+A pasta `controllers` apresenta baixa cobertura em arquivos críticos como `api.js` e `user.js`, indicando áreas prioritárias para novos testes.
+
+![Cobertura Controllers](images-readme/controllers.png)
+
+**3. Detalhamento: Config**
+Na pasta `config`, o arquivo `passport.js` representa a maior oportunidade de melhoria na cobertura de testes.
+
+![Cobertura Config](images-readme/config.png)
+
+
+
+
 **Live Demo**: [Link](https://hackathon-starter-1.ydftech.com)
 
 Jump to [What's new?](https://github.com/sahat/hackathon-starter/blob/master/CHANGELOG.md)
