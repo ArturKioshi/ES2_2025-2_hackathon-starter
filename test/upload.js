@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const sinon = require('sinon');
 const User = require('../models/User');
+const { extractCsrfToken } = require('./utils/csrfToken');
 
 let app;
 
@@ -51,6 +52,12 @@ describe('Profile Picture Upload', () => {
   });
 
   after(async () => {
+    // Clean upload files
+    const uploadDir = path.join(__dirname, '../uploads');
+    if (fs.existsSync(uploadDir)) {
+      fs.rmSync(uploadDir, { recursive: true, force: true });
+    }
+
     if (mongoose.connection) {
       await mongoose.connection.close();
     }
@@ -59,23 +66,18 @@ describe('Profile Picture Upload', () => {
     }
   });
 
-  it('should log in and upload profile picture successfully', (done) => {
+  it('should login and upload profile picture successfully', (done) => {
     const agent = request.agent(app);
 
-    // GET signup to take the CSRF token
     agent
       .get('/signup')
       .expect(200)
       .end((err, res) => {
         if (err) return done(err);
 
-        const signupCsrfMatch = res.text.match(/name="_csrf" value="([^"]+)"/);
-        if (!signupCsrfMatch) {
-          return done(new Error('Token CSRF não encontrado na página de signup'));
-        }
-        const signupCsrf = signupCsrfMatch[1];
+        const signupCsrf = extractCsrfToken(res);
+        if (!signupCsrf) return done(new Error('CSRF Signup Token not found'));
 
-        // 2. Signup with Token
         agent
           .post('/signup')
           .send({
@@ -88,28 +90,18 @@ describe('Profile Picture Upload', () => {
           .end((err) => {
             if (err) return done(err);
 
-            // 3. GET /account to take session CSRF token
             agent
               .get('/account')
               .expect(200)
               .end((err, res) => {
                 if (err) return done(err);
 
-                const csrfTokenMatch = res.text.match(/name="_csrf" value="([^"]+)"/);
-
-                if (!csrfTokenMatch) {
-                  return done(new Error('The CSRF token could not be found on the /account page.'));
-                }
-
-                const uploadCsrf = csrfTokenMatch[1];
+                const uploadCsrf = extractCsrfToken(res);
+                if (!uploadCsrf) return done(new Error('CSRF Account Token not found'));
 
                 const imagePath = path.resolve(__dirname, 'uploads-test/test-avatar.jpg');
+                if (!fs.existsSync(imagePath)) return done(new Error(`Image not found: ${imagePath}`));
 
-                if (!fs.existsSync(imagePath)) {
-                  return done(new Error(`Test image not found at: ${imagePath}`));
-                }
-
-                // 4. Upload with Token
                 agent
                   .post('/account/profile')
                   .field('name', testUser.name)
@@ -122,14 +114,10 @@ describe('Profile Picture Upload', () => {
 
                     try {
                       const user = await User.findOne({ email: testUser.email });
-
-                      if (!user) {
-                        return done(new Error('User not found in database'));
-                      }
+                      if (!user) return done(new Error('User not found'));
 
                       expect(user.profile.picture).to.be.a('string');
                       expect(user.profile.picture).to.match(/^\/avatars\//);
-
                       done();
                     } catch (e) {
                       done(e);
@@ -138,5 +126,55 @@ describe('Profile Picture Upload', () => {
               });
           });
       });
+  });
+
+  it('should replace profile picture and delete the old file from disk', async () => {
+    const agent = request.agent(app);
+
+    const signupPage = await agent.get('/signup').expect(200);
+    const signupCsrf = extractCsrfToken(signupPage);
+
+    await agent
+      .post('/signup')
+      .send({
+        email: testUser.email,
+        password: testUser.password,
+        confirmPassword: testUser.password,
+        _csrf: signupCsrf,
+      })
+      .expect(302);
+
+    // First Upload
+    const accountPage = await agent.get('/account').expect(200);
+    const uploadCsrf = extractCsrfToken(accountPage);
+    const imagePath = path.resolve(__dirname, 'uploads-test/test-avatar.jpg');
+
+    await agent.post('/account/profile').field('name', testUser.name).field('email', testUser.email).field('_csrf', uploadCsrf).attach('photo', imagePath).expect(302);
+
+    const userV1 = await User.findOne({ email: testUser.email });
+    const pathV1 = userV1.profile.picture;
+
+    // Converts virtual URL (/avatars/..) to physical path (../uploads/..)
+    // LocalStorage saves to: path.join(__dirname, '../../uploads') (relative to the provider's file)
+    const relativePathV1 = pathV1.replace('/avatars/', '');
+    const physicalPathV1 = path.join(__dirname, '../uploads', relativePathV1);
+
+    expect(fs.existsSync(physicalPathV1)).to.be.true;
+
+    // Second Upload
+    const accountPage2 = await agent.get('/account').expect(200);
+    const uploadCsrf2 = extractCsrfToken(accountPage2);
+
+    await agent.post('/account/profile').field('name', testUser.name).field('email', testUser.email).field('_csrf', uploadCsrf2).attach('photo', imagePath).expect(302);
+
+    const userV2 = await User.findOne({ email: testUser.email });
+    const pathV2 = userV2.profile.picture;
+
+    expect(pathV1).to.not.equal(pathV2);
+    expect(fs.existsSync(physicalPathV1)).to.be.false;
+
+    const relativePathV2 = pathV2.replace('/avatars/', '');
+    const physicalPathV2 = path.join(__dirname, '../uploads', relativePathV2);
+    expect(fs.existsSync(physicalPathV2)).to.be.true;
   });
 });
