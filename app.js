@@ -13,6 +13,7 @@ const flash = require('express-flash');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 
 /**
  * Load environment variables from .env file, where API keys and passwords are configured.
@@ -23,6 +24,7 @@ dotenv.config({ path: '.env.example' });
  * Set config values
  */
 const secureTransfer = process.env.BASE_URL.startsWith('https');
+const upload = multer({ storage: multer.memoryStorage() });
 
 /**
  * Rate limiting configuration
@@ -125,7 +127,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 app.use((req, res, next) => {
-  if (req.path === '/api/upload' || req.path === '/ai/togetherai-camera') {
+  if (req.path === '/api/upload' || req.path === '/ai/togetherai-camera' || req.path === '/account/profile') {
     // Multer multipart/form-data handling needs to occur before the Lusca CSRF check.
     // WARN: Any path that is not protected by CSRF here should have lusca.csrf() chained
     // in their route handler.
@@ -162,6 +164,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+app.use('/avatars', express.static(path.join(__dirname, 'uploads')));
 app.use('/', express.static(path.join(__dirname, 'public'), { maxAge: 31557600000 }));
 app.use('/js/lib', express.static(path.join(__dirname, 'node_modules/chart.js/dist'), { maxAge: 31557600000 }));
 app.use('/js/lib', express.static(path.join(__dirname, 'node_modules/@popperjs/core/dist/umd'), { maxAge: 31557600000 }));
@@ -196,7 +199,7 @@ app.post('/contact', contactController.postContact);
 app.get('/account/verify', passportConfig.isAuthenticated, userController.getVerifyEmail);
 app.get('/account/verify/:token', passportConfig.isAuthenticated, userController.getVerifyEmailToken);
 app.get('/account', passportConfig.isAuthenticated, userController.getAccount);
-app.post('/account/profile', passportConfig.isAuthenticated, userController.postUpdateProfile);
+app.post('/account/profile', passportConfig.isAuthenticated, upload.single('photo'), lusca({ csrf: true }), userController.postUpdateProfile);
 app.post('/account/password', passportConfig.isAuthenticated, userController.postUpdatePassword);
 app.post('/account/delete', passportConfig.isAuthenticated, userController.postDeleteAccount);
 app.post('/account/logout-everywhere', passportConfig.isAuthenticated, userController.postLogoutEverywhere);
