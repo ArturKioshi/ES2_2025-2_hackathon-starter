@@ -1,7 +1,7 @@
-const crypto = require('crypto');
-const fs = require('fs');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
 const multer = require('multer');
-const path = require('path');
+const path = require('node:path');
 const { PDFLoader } = require('@langchain/community/document_loaders/fs/pdf');
 const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
 const { HuggingFaceInferenceEmbeddings } = require('@langchain/community/embeddings/hf');
@@ -490,12 +490,12 @@ exports.postOpenAIModeration = async (req, res) => {
           input: inputText,
         }),
       });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        error = errData.error && errData.error.message ? errData.error.message : `API Error: ${response.status}`;
-      } else {
+      if (response.ok) {
         const data = await response.json();
-        result = data.results && data.results[0];
+        result = data.results?.[0];
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        error = errData.error?.message || `API Error: ${response.status}`;
       }
     } catch (err) {
       console.error('OpenAI Moderation API Error:', err);
@@ -529,7 +529,7 @@ const callTogetherAiApi = async (apiRequestBody, apiKey) => {
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
     console.error('Together AI API Error Response:', errData);
-    const errorMessage = errData.error && errData.error.message ? errData.error.message : `API Error: ${response.status}`;
+    const errorMessage = errData.error?.message || `API Error: ${response.status}`;
     throw new Error(errorMessage);
   }
   return response.json();
@@ -557,12 +557,7 @@ const createVisionLLMRequestBody = (dataUrl, model) => ({
   ],
 });
 
-const extractVisionAnalysis = (data) => {
-  if (data.choices && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-    return data.choices[0].message.content;
-  }
-  return 'No vision analysis available';
-};
+const extractVisionAnalysis = (data) => data?.choices?.[0]?.message?.content || 'No vision analysis available';
 
 // Classifier-specific functions
 const createClassifierLLMRequestBody = (inputText, model, systemPrompt) => ({
@@ -582,7 +577,7 @@ const extractClassifierResponse = (content) => {
       // Try to extract JSON from the response
       const jsonStringMatch = content.match(/{.*}/s);
       if (jsonStringMatch) {
-        const parsed = JSON.parse(jsonStringMatch[0].replace(/'/g, '"'));
+        const parsed = JSON.parse(jsonStringMatch[0].replaceAll("'", '"'));
         ({ department } = parsed);
       }
     } catch (err) {
@@ -672,10 +667,8 @@ exports.postTogetherAICamera = async (req, res) => {
     }
     const dataUrl = createImageDataUrl(req.file);
     const apiRequestBody = createVisionLLMRequestBody(dataUrl, togetherAiModel);
-    // console.log('Making Vision API request to Together AI...');
     const data = await callTogetherAiApi(apiRequestBody, togetherAiKey);
     const analysis = extractVisionAnalysis(data);
-    // console.log('Vision analysis completed:', analysis);
     res.json({ analysis });
   } catch (error) {
     console.error('Error analyzing image:', error);
@@ -722,7 +715,7 @@ exports.postTogetherAIClassifier = async (req, res) => {
       const systemPrompt = messageClassifierSystemPrompt; // Your existing system prompt here
       const apiRequestBody = createClassifierLLMRequestBody(inputText, togetherAiModel, systemPrompt);
       const data = await callTogetherAiApi(apiRequestBody, togetherAiKey);
-      const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      const content = data?.choices?.[0]?.message?.content;
       const department = extractClassifierResponse(content);
       result = {
         department,
