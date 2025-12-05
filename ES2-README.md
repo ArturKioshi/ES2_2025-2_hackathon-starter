@@ -106,92 +106,83 @@ Pontos de Atenção:
 
 ## L - Implementar casos de teste relevantes que melhorem a cobertura de código do projeto original
 
-Foram adicionados dois novos arquivos de teste ao projeto: **`ai.test.js`** e **`api.test.js`**.  
-Eles utilizam principalmente **Mocha**, **Chai** e **Sinon** para construir testes unitários dos controllers do sistema.
+Foram adicionados dois novos arquivos de teste ao projeto: **`ai.test.js`** e **`api.test.js`**.
+Eles utilizam uma combinação de **Mocha**, **Chai**, **Sinon** e **Proxyquire** para construir testes unitários robustos e isolados para os controllers do sistema.
 
 ## 1. Bibliotecas Utilizadas
 
-- **Mocha (`describe`, `it`)**  
-  Estrutura base dos testes, organiza blocos e casos individuais.
+- **Mocha (`describe`, `it`)**
+  Estrutura base dos testes, organiza blocos lógicos e casos de teste individuais.
 
-- **Chai (`expect`)**  
-  Biblioteca de asserções usada para validar valores retornados, chamadas de funções e objetos.
+- **Chai (`expect`)**
+  Biblioteca de asserções usada para validar retornos, verificação de tipos e igualdade profunda de objetos.
 
-- **Sinon (`stub`, `spy`, `restore`)**  
-  Usada para:
-  - Criar _mocks_ e _stubs_ de funções,
-  - Simular comportamentos de APIs externas,
-  - Substituir dependências como `fetch`, `stripe`, etc.
+- **Sinon (`stub`, `spy`, `restore`)**
+  Fundamental para:
+  - Criar _stubs_ de funções globais (como `fetch`).
+  - Espionar chamadas de métodos.
+  - Simular comportamentos de APIs externas sem realizar requisições reais.
+
+- **Proxyquire**
+  Utilizada no controller de IA para injetar _mocks_ em dependências importadas via `require`, permitindo testar o código isolando módulos como `fs`, `mongodb` e pacotes do `@langchain`.
 
 ## 2. `ai.test.js` — Testes do Controller de IA
 
-Este arquivo testa todas as principais rotas do controller **AI**, incluindo páginas de interface e funções de processamento que dependem de APIs externas.
+Este arquivo testa as rotas do controller **AI**, com foco pesado na simulação de serviços de Inteligência Artificial e Banco de Dados.
 
 ### Principais funcionalidades testadas:
 
-1. **Renderização de páginas básicas**
-   - `getAi()`
-   - `getOpenAIModeration()`
-   - `getTogetherAICamera()`
-   - `getTogetherAIClassifier()`
+1. **Rotas de Interface**
+   - Renderização das páginas: `getAi`, `getOpenAIModeration`, `getTogetherAICamera`, `getTogetherAIClassifier`.
 
-2. **Validação de inputs**
-   - Falta de texto para moderação (`postOpenAIModeration`)
-   - Falta de imagem no upload (`postTogetherAICamera`)
-   - Questão vazia no sistema RAG (`postRagAsk`)
-   - Campo de classificação vazio (`postTogetherAIClassifier`)
+2. **Integrações com LLMs e LangChain (RAG)**
+   - **Ingestão (PostRagIngest):** Simula a leitura de arquivos PDF, _splitting_ de texto e salvamento em vetor.
+   - **Busca e Resposta (PostRagAsk):** Testa o fluxo completo de _Retrieval Augmented Generation_:
+     - Simula conexão com MongoDB Atlas.
+     - Simula busca de similaridade vetorial (`vectorSearchMock`).
+     - Simula geração de resposta via `ChatTogetherAI`.
 
-3. **Erros de variáveis de ambiente**
-   - Falta de `OPENAI_API_KEY`
-   - Falta de `TOGETHERAI_API_KEY`
+3. **Validação de Erros e Fluxos Alternativos**
+   - **Banco de Dados:** Tratamento de erro na falha de conexão com o MongoDB (`getRag`).
+   - **Uploads:** Validação de ausência de imagem para análise (`postTogetherAICamera`).
+   - **API Keys:** Tratamento de erro quando `OPENAI_API_KEY` ou `TOGETHERAI_API_KEY` não estão configuradas.
+   - **Input:** Redirecionamento correto ao enviar perguntas vazias no RAG.
 
-4. **Simulação de uploads**
-   - Teste de envio de imagem usando `req.file.buffer`.
+### Técnicas de Mocking:
 
-### O que os testes verificam?
-
-- Se a página correta é renderizada (`res.render.calledWith`).
-- Se erros são retornados corretamente (`model.error`).
-- Se o status HTTP está correto (`res.status(400)`).
-- Se redirecionamentos são feitos no fluxo certo.
-- Se mensagens de flash são exibidas quando necessário.
+O teste utiliza `proxyquire` para substituir inteiramente a implementação real do `MongoClient` e das classes do `LangChain`, garantindo que nenhum custo de API ou conexão de banco real ocorra durante os testes.
 
 ## 3. `api.test.js` — Testes do Controller de APIs
 
-Este arquivo cobre todas as rotas relacionadas às APIs gerais do sistema, incluindo Stripe, Twilio, Upload e Scraping.
+Este arquivo cobre um amplo espectro de integrações externas, manipulando principalmente o `global.fetch` e injeções de cache de módulos.
 
 ### Principais funcionalidades testadas:
 
-1. **Renderização de páginas de API**
-   - `getApi()`
-   - `getStripe()`
-   - `getTwilio()`
-   - `getFileUpload()`
+1. **Pagamentos e Serviços (Stripe, PayPal, Twilio)**
+   - **Stripe:** Uso de injeção no `require.cache` para simular a criação de cobranças.
+   - **PayPal:** Teste do fluxo de cancelamento (`getPayPalCancel`), garantindo a limpeza da sessão (`orderId`).
+   - **Twilio:** Renderização da página de configuração.
 
-2. **Upload de arquivos**
-   - `postFileUpload()`  
-     — Testa tanto upload real quanto upload vazio (flash de sucesso em ambos os casos).
+2. **Integração Steam (Complexa)**
+   Usa `sinon.stub(global, 'fetch')` sequencial (`onCall`) para simular múltiplos endpoints em uma única rota:
+   - Jogos possuídos, Conquistas, Resumo do perfil e Jogos recentes.
+   - **Cenários de borda:** Jogador sem jogos recentes, perfil com conquistas privadas (Erro 403) e falhas de rede.
 
-3. **Steam API**
-   Usa `sinon.stub(global, 'fetch')` para simular todas chamadas à API da Steam:
-   - Busca de jogos recentes
-   - Busca de conquistas
-   - Dados do perfil do usuário
-   - Lista de jogos na biblioteca
+3. **Dados Externos (Scraping, Foursquare, NYT, Chart)**
+   - **Scraping:** Simula retorno de HTML cru e verifica extração de links.
+   - **Foursquare:** Valida o fluxo de busca de locais e tratamento de erros da API.
+   - **New York Times:** Testa o parsing de JSON e o tratamento de respostas inesperadas (ex: HTML em vez de JSON).
+   - **Chart:** Verifica o comportamento de _fallback_ quando a API de dados financeiros retorna vazio.
 
-### Casos tratados:
-
-- Fluxo completo funcionando (todas APIs retornando OK)
-- Jogador sem jogos recentes
-- Conquistas privadas (erro 403)
-- Erros de rede (testa se `next(err)` é chamado)
+4. **Upload de Arquivos**
+   - Valida o fluxo de `postFileUpload`, garantindo que mensagens de _flash_ (sucesso) sejam acionadas tanto para uploads reais quanto vazios (comportamento do framework).
 
 ## 4. Novos Resultados
 
-Abaixo estão os resultados da nova execução, evidenciando as métricas Branches, Functions e Lines.
+Abaixo estão os resultados da nova execução, evidenciando as métricas de Branches, Functions e Lines após a inclusão destes cenários.
 
 **1. Visão Geral do Projeto**
-A cobertura global atual é de aproximadamente **55%** nas instruções.
+A cobertura global foi ampliada significativamente com a inclusão de cenários de erro e fluxos completos de APIs.
 
 ![Visão Geral da Cobertura](images-readme/ger_new.png)
 
@@ -205,12 +196,8 @@ A cobertura global atual é de aproximadamente **55%** nas instruções.
 
 ## 5. Resumo Geral
 
-Os arquivos **`ai.test.js`** e **`api.test.js`**:
-
-- Aumentam a cobertura de testes do projeto.
-- Garantem que as rotas dos controllers continuam funcionando mesmo com mudanças internas.
-- Simulam chamadas a APIs externas (OpenAI, TogetherAI, Steam, Stripe, etc).
-- Validam corretamente erros, fluxos normais e cenários inesperados.
-- Usam _stubs_, _mocks_, e inspeção de chamadas para assegurar que a aplicação responde como esperado.
-
-Eles representam a base de um conjunto robusto de testes unitários para controllers de aplicações Node.js.
+- Aumentamos a cobertura de testes do projeto.
+- Garantimos que as rotas dos controllers continuam funcionando mesmo com mudanças internas.
+- Simulamos chamadas a APIs externas (OpenAI, TogetherAI, Steam, Stripe, etc).
+- Validamos corretamente erros, fluxos normais e cenários inesperados.
+- Usamos _stubs_, _mocks_, e inspeção de chamadas para assegurar que a aplicação responde como esperado.
