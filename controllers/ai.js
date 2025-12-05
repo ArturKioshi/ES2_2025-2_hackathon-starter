@@ -492,10 +492,10 @@ exports.postOpenAIModeration = async (req, res) => {
       });
       if (response.ok) {
         const data = await response.json();
-        result = data.results && data.results[0];
+        result = data.results?.[0];
       } else {
         const errData = await response.json().catch(() => ({}));
-        error = errData.error && errData.error.message ? errData.error.message : `API Error: ${response.status}`;
+        error = errData.error?.message || `API Error: ${response.status}`;
       }
     } catch (err) {
       console.error('OpenAI Moderation API Error:', err);
@@ -529,7 +529,7 @@ const callTogetherAiApi = async (apiRequestBody, apiKey) => {
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
     console.error('Together AI API Error Response:', errData);
-    const errorMessage = errData.error && errData.error.message ? errData.error.message : `API Error: ${response.status}`;
+    const errorMessage = errData.error?.message || `API Error: ${response.status}`;
     throw new Error(errorMessage);
   }
   return response.json();
@@ -557,12 +557,7 @@ const createVisionLLMRequestBody = (dataUrl, model) => ({
   ],
 });
 
-const extractVisionAnalysis = (data) => {
-  if (data.choices && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-    return data.choices[0].message.content;
-  }
-  return 'No vision analysis available';
-};
+const extractVisionAnalysis = (data) => data?.choices?.[0]?.message?.content || 'No vision analysis available';
 
 // Classifier-specific functions
 const createClassifierLLMRequestBody = (inputText, model, systemPrompt) => ({
