@@ -490,12 +490,12 @@ exports.postOpenAIModeration = async (req, res) => {
           input: inputText,
         }),
       });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        error = errData.error && errData.error.message ? errData.error.message : `API Error: ${response.status}`;
-      } else {
+      if (response.ok) {
         const data = await response.json();
         result = data.results && data.results[0];
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        error = errData.error && errData.error.message ? errData.error.message : `API Error: ${response.status}`;
       }
     } catch (err) {
       console.error('OpenAI Moderation API Error:', err);
