@@ -32,6 +32,7 @@ $(() => {
   var stickyNotes = {
     notes: [],
     maxNotes: 20,
+    nextPosition: 0,
 
     createNote(text, color) {
       if (this.notes.length >= this.maxNotes) {
@@ -42,9 +43,10 @@ $(() => {
       var viewportWidth = Math.max(0, window.innerWidth || 0);
       var viewportHeight = Math.max(0, window.innerHeight || 0);
 
-      var id = `note-${Date.now()}`;
-      var x = viewportWidth ? Math.random() * (viewportWidth - 270) : 24;
-      var y = viewportHeight ? Math.random() * (viewportHeight - 270) : 120;
+      var offset = this.nextPosition * 30;
+      var x = viewportWidth ? Math.min((100 + offset) % (viewportWidth - 270), viewportWidth - 270) : 24;
+      var y = viewportHeight ? Math.min((120 + offset) % (viewportHeight - 270), viewportHeight - 270) : 120;
+      this.nextPosition = (this.nextPosition + 1) % 10;
 
       var note = {
         id: id,
