@@ -103,3 +103,120 @@ Pontos de Atenção:
 - A validação de formulários de autenticação (vazios/senhas divergentes) poderia ser aprimorada para oferecer feedback imediato ao usuário, visto que atualmente permite a tentativa de submissão.
 
 - As integrações externas (OAuth) e links de documentação estão plenamente funcionais.
+
+## L - Implementar casos de teste relevantes que melhorem a cobertura de código do projeto original
+
+Foram adicionados dois novos arquivos de teste ao projeto: **`ai.test.js`** e **`api.test.js`**.  
+Eles utilizam principalmente **Mocha**, **Chai** e **Sinon** para construir testes unitários dos controllers do sistema.
+
+
+## 1. Bibliotecas Utilizadas
+
+- **Mocha (`describe`, `it`)**  
+  Estrutura base dos testes, organiza blocos e casos individuais.
+
+- **Chai (`expect`)**  
+  Biblioteca de asserções usada para validar valores retornados, chamadas de funções e objetos.
+
+- **Sinon (`stub`, `spy`, `restore`)**  
+  Usada para:
+  - Criar *mocks* e *stubs* de funções,
+  - Simular comportamentos de APIs externas,
+  - Substituir dependências como `fetch`, `stripe`, etc.
+
+
+## 2. `ai.test.js` — Testes do Controller de IA
+
+Este arquivo testa todas as principais rotas do controller **AI**, incluindo páginas de interface e funções de processamento que dependem de APIs externas.
+
+### Principais funcionalidades testadas:
+
+1. **Renderização de páginas básicas**
+   - `getAi()`
+   - `getOpenAIModeration()`
+   - `getTogetherAICamera()`
+   - `getTogetherAIClassifier()`
+
+2. **Validação de inputs**
+   - Falta de texto para moderação (`postOpenAIModeration`)
+   - Falta de imagem no upload (`postTogetherAICamera`)
+   - Questão vazia no sistema RAG (`postRagAsk`)
+   - Campo de classificação vazio (`postTogetherAIClassifier`)
+
+3. **Erros de variáveis de ambiente**
+   - Falta de `OPENAI_API_KEY`
+   - Falta de `TOGETHERAI_API_KEY`
+
+4. **Simulação de uploads**
+   - Teste de envio de imagem usando `req.file.buffer`.
+
+### O que os testes verificam?
+
+- Se a página correta é renderizada (`res.render.calledWith`).
+- Se erros são retornados corretamente (`model.error`).
+- Se o status HTTP está correto (`res.status(400)`).
+- Se redirecionamentos são feitos no fluxo certo.
+- Se mensagens de flash são exibidas quando necessário.
+
+
+## 3. `api.test.js` — Testes do Controller de APIs
+
+Este arquivo cobre todas as rotas relacionadas às APIs gerais do sistema, incluindo Stripe, Twilio, Upload e Scraping.
+
+### Principais funcionalidades testadas:
+
+1. **Renderização de páginas de API**
+   - `getApi()`
+   - `getStripe()`
+   - `getTwilio()`
+   - `getFileUpload()`
+
+2. **Upload de arquivos**
+   - `postFileUpload()`  
+     — Testa tanto upload real quanto upload vazio (flash de sucesso em ambos os casos).
+
+
+3. **Steam API**
+   Usa `sinon.stub(global, 'fetch')` para simular todas chamadas à API da Steam:
+
+   - Busca de jogos recentes
+   - Busca de conquistas
+   - Dados do perfil do usuário
+   - Lista de jogos na biblioteca
+
+### Casos tratados:
+
+- Fluxo completo funcionando (todas APIs retornando OK)
+- Jogador sem jogos recentes
+- Conquistas privadas (erro 403)
+- Erros de rede (testa se `next(err)` é chamado)
+
+## 4. Novos Resultados
+
+Abaixo estão os resultados da nova execução, evidenciando as métricas Branches, Functions e Lines.
+
+**1. Visão Geral do Projeto**
+A cobertura global atual é de aproximadamente **40.97%** nas instruções.
+
+![Visão Geral da Cobertura](images-readme/geral_new.png)
+
+**2. Detalhamento: Controllers**
+
+
+![Cobertura Controllers](images-readme/controllers_new.png)
+
+**3. Detalhamento: Config**
+
+![Cobertura Config](images-readme/config_new.png)
+
+## 5. Resumo Geral
+
+Os arquivos **`ai.test.js`** e **`api.test.js`**:
+
+- Aumentam a cobertura de testes do projeto.  
+- Garantem que as rotas dos controllers continuam funcionando mesmo com mudanças internas.  
+- Simulam chamadas a APIs externas (OpenAI, TogetherAI, Steam, Stripe, etc).  
+- Validam corretamente erros, fluxos normais e cenários inesperados.  
+- Usam *stubs*, *mocks*, e inspeção de chamadas para assegurar que a aplicação responde como esperado.
+
+Eles representam a base de um conjunto robusto de testes unitários para controllers de aplicações Node.js.
