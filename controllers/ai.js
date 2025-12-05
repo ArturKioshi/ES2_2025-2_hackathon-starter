@@ -577,7 +577,7 @@ const extractClassifierResponse = (content) => {
       // Try to extract JSON from the response
       const jsonStringMatch = content.match(/{.*}/s);
       if (jsonStringMatch) {
-        const parsed = JSON.parse(jsonStringMatch[0].replace(/'/g, '"'));
+        const parsed = JSON.parse(jsonStringMatch[0].replaceAll("'", '"'));
         ({ department } = parsed);
       }
     } catch (err) {
