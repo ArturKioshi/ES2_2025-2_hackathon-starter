@@ -191,13 +191,13 @@ Este arquivo cobre todas as rotas relacionadas às APIs gerais do sistema, inclu
 Abaixo estão os resultados da nova execução, evidenciando as métricas Branches, Functions e Lines.
 
 **1. Visão Geral do Projeto**
-A cobertura global atual é de aproximadamente **40.97%** nas instruções.
+A cobertura global atual é de aproximadamente **55%** nas instruções.
 
-![Visão Geral da Cobertura](images-readme/geral_new.png)
+![Visão Geral da Cobertura](images-readme/ger_new.png)
 
 **2. Detalhamento: Controllers**
 
-![Cobertura Controllers](images-readme/controllers_new.png)
+![Cobertura Controllers](images-readme/controller_new.png)
 
 **3. Detalhamento: Config**
 
