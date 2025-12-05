@@ -63,10 +63,12 @@ describe('AI Controller Tests', () => {
 
     class MockMongoClient {
       constructor() {
+        // eslint-disable-next-line no-constructor-return
         return mongoClientMock;
       }
     }
 
+    /* eslint-disable class-methods-use-this */
     pdfLoaderMock = class {
       load() {
         return Promise.resolve([{ pageContent: 'text', metadata: {} }]);
@@ -98,10 +100,12 @@ describe('AI Controller Tests', () => {
       generate() {
         return Promise.resolve({ generations: [[{ text: 'RAG Answer' }], [{ text: 'General Answer' }]] });
       }
+
       invoke() {
         return Promise.resolve({ content: 'RAG Answer' });
       }
     };
+    /* eslint-enable class-methods-use-this */
 
     sinon.spy(chatTogetherAIMock.prototype, 'generate');
     sinon.spy(chatTogetherAIMock.prototype, 'invoke');
@@ -144,7 +148,8 @@ describe('AI Controller Tests', () => {
 
     aiController = proxyquire('../controllers/ai', {
       fs: fsMock,
-      path: path,
+      path,
+      // eslint-disable-next-line global-require
       crypto: require('crypto'),
       mongodb: { MongoClient: MockMongoClient },
       '@langchain/community/document_loaders/fs/pdf': { PDFLoader: pdfLoaderMock },
