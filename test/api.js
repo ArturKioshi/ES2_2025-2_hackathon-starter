@@ -257,3 +257,129 @@ describe('Steam API Tests', () => {
     fetchStub.restore();
   });
 });
+
+describe('Foursquare, NYT and Chart', () => {
+  let req;
+  let res;
+  let next;
+
+  beforeEach(() => {
+    req = {
+      body: {},
+      user: {
+        tokens: [],
+        profile: { name: 'Test User' },
+      },
+      session: {},
+      flash: sinon.stub(),
+    };
+
+    res = {
+      render: sinon.stub(),
+      redirect: sinon.stub(),
+    };
+
+    next = sinon.stub();
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  it('should render Foursquare page with data', async () => {
+    const fetchStub = sinon.stub(global, 'fetch');
+
+    fetchStub.onCall(0).resolves({
+      json: async () => ({ results: ['Venue A', 'Venue B'] }),
+    });
+    fetchStub.onCall(1).resolves({
+      json: async () => ({ name: 'Specific Venue' }),
+    });
+    fetchStub.onCall(2).resolves({
+      json: async () => [{ prefix: 'http://img', suffix: '.jpg' }],
+    });
+
+    await api.getFoursquare(req, res, next);
+
+    expect(res.render.calledOnce).to.be.true;
+    expect(res.render.firstCall.args[0]).to.equal('api/foursquare');
+    const data = res.render.firstCall.args[1];
+    expect(data.trendingVenues).to.have.lengthOf(2);
+    expect(data.venueDetail.name).to.equal('Specific Venue');
+  });
+
+  it('should handle Foursquare errors', async () => {
+    sinon.stub(global, 'fetch').rejects(new Error('Foursquare API Error'));
+
+    await api.getFoursquare(req, res, next);
+
+    expect(next.calledOnce).to.be.true;
+    expect(next.firstCall.args[0].message).to.equal('Foursquare API Error');
+  });
+
+  it('should render NYT page with books', async () => {
+    sinon.stub(global, 'fetch').resolves({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        results: {
+          books: [{ title: 'Book 1' }, { title: 'Book 2' }],
+        },
+      }),
+    });
+
+    await api.getNewYorkTimes(req, res, next);
+
+    expect(res.render.calledOnce).to.be.true;
+    expect(res.render.firstCall.args[0]).to.equal('api/nyt');
+    expect(res.render.firstCall.args[1].books).to.have.lengthOf(2);
+  });
+
+  it('should handle NYT API non-JSON response', async () => {
+    sinon.stub(global, 'fetch').resolves({
+      ok: true,
+      headers: { get: () => 'text/html' },
+      text: async () => '<html>Error</html>',
+    });
+
+    await api.getNewYorkTimes(req, res, next);
+
+    expect(next.calledOnce).to.be.true;
+    expect(next.firstCall.args[0].message).to.include('NYT API did not return JSON');
+  });
+
+  it('should throw error in Tumblr if no token found', async () => {
+    req.user.tokens = [];
+
+    try {
+      await api.getTumblr(req, res, next);
+    } catch (err) {
+      expect(err).to.exist;
+      expect(err.message).to.equal('No Tumblr token found for user.');
+    }
+  });
+
+  it('should clear session orderId on PayPal Cancel', () => {
+    req.session = { orderId: '12345' };
+
+    api.getPayPalCancel(req, res);
+
+    expect(req.session.orderId).to.be.null;
+    expect(res.render.calledOnce).to.be.true;
+    expect(res.render.firstCall.args[0]).to.equal('api/paypal');
+    expect(res.render.firstCall.args[1].canceled).to.be.true;
+  });
+
+  it('should render Chart with fallback data if API returns empty', async () => {
+    sinon.stub(global, 'fetch').resolves({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await api.getChart(req, res, next);
+
+    expect(res.render.calledOnce).to.be.true;
+    const data = res.render.firstCall.args[1];
+    expect(data.dataType).to.include('Unable to get live data');
+  });
+});

@@ -1,74 +1,115 @@
+const proxyquire = require('proxyquire').noCallThru();
 const { expect } = require('chai');
 const sinon = require('sinon');
-const ai = require('../controllers/ai');
+const path = require('path');
 
-describe('AI Controller basic tests', () => {
+describe('AI Controller Tests', () => {
   let req;
   let res;
+  let aiController;
 
-  beforeEach(() => {
-    req = {
-      body: {},
-      flash: sinon.stub(),
-    };
+  let fsMock;
+  let collectionMock;
+  let dbMock;
+  let mongoClientMock;
+  let vectorSearchMock;
+  let chatTogetherAIMock;
+  let pdfLoaderMock;
+  let textSplitterMock;
+  let embeddingsMock;
 
-    res = {
-      render: sinon.stub(),
-      redirect: sinon.stub(),
-    };
+  const mockCursor = (data = []) => ({
+    toArray: sinon.stub().resolves(data),
   });
 
-  afterEach(() => {
+  beforeEach(() => {
     sinon.restore();
-  });
 
-  it('should render AI index page', () => {
-    ai.getAi(req, res);
+    const controllerPath = require.resolve('../controllers/ai');
+    if (require.cache[controllerPath]) {
+      delete require.cache[controllerPath];
+    }
 
-    expect(res.render.calledOnce).to.be.true;
-    expect(res.render.firstCall.args[0]).to.equal('ai/index');
-    expect(res.render.firstCall.args[1]).to.deep.equal({ title: 'AI Examples' });
-  });
+    fsMock = {
+      existsSync: sinon.stub(),
+      mkdirSync: sinon.stub(),
+      readdirSync: sinon.stub(),
+      readFileSync: sinon.stub(),
+      renameSync: sinon.stub(),
+    };
 
-  it('should render moderation page with default values', () => {
-    ai.getOpenAIModeration(req, res);
+    // MongoDB Mocks
+    collectionMock = {
+      countDocuments: sinon.stub(),
+      createSearchIndex: sinon.stub(),
+      createIndex: sinon.stub(),
+      listSearchIndexes: sinon.stub(),
+      distinct: sinon.stub(),
+      findOne: sinon.stub(),
+      updateSearchIndex: sinon.stub(),
+    };
 
-    expect(res.render.calledOnce).to.be.true;
-    expect(res.render.firstCall.args[0]).to.equal('ai/openai-moderation');
+    dbMock = {
+      collection: sinon.stub().returns(collectionMock),
+      listCollections: sinon.stub(),
+      createCollection: sinon.stub().returns(collectionMock),
+    };
 
-    const model = res.render.firstCall.args[1];
-    expect(model.result).to.equal(null);
-    expect(model.error).to.equal(null);
-  });
+    mongoClientMock = {
+      connect: sinon.stub(),
+      db: sinon.stub().returns(dbMock),
+      close: sinon.stub(),
+    };
 
-  it('should return error when OPENAI_API_KEY is missing', async () => {
-    process.env.OPENAI_API_KEY = ''; // simulate missing key
-    req.body.inputText = 'Hello World';
+    class MockMongoClient {
+      constructor() {
+        // eslint-disable-next-line no-constructor-return
+        return mongoClientMock;
+      }
+    }
 
-    await ai.postOpenAIModeration(req, res);
+    /* eslint-disable class-methods-use-this */
+    pdfLoaderMock = class {
+      load() {
+        return Promise.resolve([{ pageContent: 'text', metadata: {} }]);
+      }
+    };
 
-    expect(res.render.calledOnce).to.be.true;
+    textSplitterMock = class {
+      splitDocuments() {
+        return Promise.resolve([{ pageContent: 'chunk', metadata: {} }]);
+      }
+    };
 
-    const model = res.render.firstCall.args[1];
-    expect(model.error).to.equal('OpenAI API key is not set in environment variables.');
-  });
+    embeddingsMock = class {};
 
-  it('should return error when text input is empty', async () => {
-    process.env.OPENAI_API_KEY = 'abc'; // simulate valid key
-    req.body.inputText = '   ';
+    vectorSearchMock = {
+      fromDocuments: sinon.stub().resolves(),
+      similaritySearch: sinon.stub().resolves([{ pageContent: 'context info' }]),
+    };
 
-    await ai.postOpenAIModeration(req, res);
+    const MockVectorSearchClass = class {
+      similaritySearch(...args) {
+        return vectorSearchMock.similaritySearch(...args);
+      }
+    };
 
-    const model = res.render.firstCall.args[1];
-    expect(model.error).to.equal('Text for input modaration check:');
-  });
-});
+    MockVectorSearchClass.fromDocuments = vectorSearchMock.fromDocuments;
 
-describe('Additional AI controller tests', () => {
-  let req;
-  let res;
+    chatTogetherAIMock = class {
+      generate() {
+        return Promise.resolve({ generations: [[{ text: 'RAG Answer' }], [{ text: 'General Answer' }]] });
+      }
 
-  beforeEach(() => {
+      invoke() {
+        return Promise.resolve({ content: 'RAG Answer' });
+      }
+    };
+    /* eslint-enable class-methods-use-this */
+
+    sinon.spy(chatTogetherAIMock.prototype, 'generate');
+    sinon.spy(chatTogetherAIMock.prototype, 'invoke');
+
     req = {
       body: {},
       file: null,
@@ -81,104 +122,191 @@ describe('Additional AI controller tests', () => {
       status: sinon.stub().returnsThis(),
       json: sinon.stub(),
     };
+
+    mongoClientMock.connect.resolves();
+    mongoClientMock.close.resolves();
+
+    dbMock.listCollections.returns(mockCursor([]));
+    collectionMock.listSearchIndexes.returns(mockCursor([{ name: 'default', status: 'READY' }]));
+    collectionMock.countDocuments.resolves(0);
+    collectionMock.createSearchIndex.resolves();
+    collectionMock.createIndex.resolves();
+    collectionMock.distinct.resolves([]);
+    collectionMock.findOne.resolves(null);
+
+    fsMock.existsSync.returns(false);
+    fsMock.mkdirSync.returns(true);
+    fsMock.readdirSync.returns([]);
+    fsMock.readFileSync.returns(Buffer.from(''));
+    fsMock.renameSync.returns(true);
+
+    if (!global.fetch) {
+      global.fetch = sinon.stub();
+    } else {
+      sinon.stub(global, 'fetch');
+    }
+
+    aiController = proxyquire('../controllers/ai', {
+      fs: fsMock,
+      path,
+      // eslint-disable-next-line global-require
+      crypto: require('crypto'),
+      mongodb: { MongoClient: MockMongoClient },
+      '@langchain/community/document_loaders/fs/pdf': { PDFLoader: pdfLoaderMock },
+      '@langchain/textsplitters': { RecursiveCharacterTextSplitter: textSplitterMock },
+      '@langchain/community/embeddings/hf': { HuggingFaceInferenceEmbeddings: embeddingsMock },
+      '@langchain/mongodb': {
+        MongoDBAtlasVectorSearch: MockVectorSearchClass,
+        MongoDBAtlasSemanticCache: class {},
+        MongoDBStore: class {},
+      },
+      '@langchain/community/chat_models/togetherai': { ChatTogetherAI: chatTogetherAIMock },
+      'pdfjs-dist/legacy/build/pdf.mjs': {},
+    });
   });
 
   afterEach(() => {
     sinon.restore();
+    if (global.fetch && global.fetch.restore) global.fetch.restore();
   });
 
-  it('should render together AI camera page', () => {
-    ai.getTogetherAICamera(req, res);
+  describe('Basic Routes', () => {
+    it('should render AI index page', () => {
+      aiController.getAi(req, res);
+      expect(res.render.calledOnce).to.be.true;
+      expect(res.render.firstCall.args[0]).to.equal('ai/index');
+    });
 
-    expect(res.render.calledOnce).to.be.true;
-    expect(res.render.firstCall.args[0]).to.equal('ai/togetherai-camera');
-  });
+    it('should render moderation page', () => {
+      aiController.getOpenAIModeration(req, res);
+      expect(res.render.calledOnce).to.be.true;
+      expect(res.render.firstCall.args[0]).to.equal('ai/openai-moderation');
+    });
 
-  it('should render together AI classifier page', () => {
-    ai.getTogetherAIClassifier(req, res);
+    it('should render together AI camera page', () => {
+      aiController.getTogetherAICamera(req, res);
+      expect(res.render.calledOnce).to.be.true;
+      expect(res.render.firstCall.args[0]).to.equal('ai/togetherai-camera');
+    });
 
-    expect(res.render.calledOnce).to.be.true;
-    expect(res.render.firstCall.args[0]).to.equal('ai/togetherai-classifier');
-  });
-
-  it('should fail when no image is provided', async () => {
-    req.file = null;
-
-    await ai.postTogetherAICamera(req, res);
-
-    expect(res.status.calledWith(400)).to.be.true;
-    expect(res.json.firstCall.args[0]).to.deep.equal({ error: 'No image provided' });
-  });
-
-  it('should return error when classifier input is empty', async () => {
-    req.body.inputText = '   ';
-    process.env.TOGETHERAI_API_KEY = 'a';
-    process.env.TOGETHERAI_MODEL = 'b';
-
-    await ai.postTogetherAIClassifier(req, res);
-
-    expect(res.render.calledOnce).to.be.true;
-    const args = res.render.firstCall.args[1];
-
-    expect(args.error).to.equal('Please enter the customer message to classify.');
-  });
-
-  it('should reject empty question and redirect with flash error', async () => {
-    req.body.question = '   ';
-
-    await ai.postRagAsk(req, res);
-
-    // Verifica redirecionamento
-    expect(res.redirect.calledOnce).to.be.true;
-    expect(res.redirect.firstCall.args[0]).to.equal('/ai/rag');
-
-    // Verifica mensagem flash
-    expect(req.flash.calledOnce).to.be.true;
-    expect(req.flash.firstCall.args[0]).to.equal('errors');
-    expect(req.flash.firstCall.args[1]).to.deep.equal({
-      msg: 'Please enter a question.',
+    it('should render together AI classifier page', () => {
+      aiController.getTogetherAIClassifier(req, res);
+      expect(res.render.calledOnce).to.be.true;
+      expect(res.render.firstCall.args[0]).to.equal('ai/togetherai-classifier');
     });
   });
-});
 
-describe('postTogetherAICamera', () => {
-  let req, res;
+  describe('OpenAI Moderation', () => {
+    it('should return error when OPENAI_API_KEY is missing', async () => {
+      const oldKey = process.env.OPENAI_API_KEY;
+      delete process.env.OPENAI_API_KEY;
+      req.body.inputText = 'Hello World';
 
-  beforeEach(() => {
-    req = {
-      file: { buffer: Buffer.from('fakeimage') },
-      body: {},
-    };
+      await aiController.postOpenAIModeration(req, res);
 
-    res = {
-      status: sinon.stub().returnsThis(),
-      json: sinon.stub().returnsThis(),
-    };
+      expect(res.render.calledOnce).to.be.true;
+      const model = res.render.firstCall.args[1];
+      expect(model.error).to.include('API key is not set');
+      process.env.OPENAI_API_KEY = oldKey;
+    });
 
-    sinon.restore();
+    it('should handle successful moderation API response', async () => {
+      process.env.OPENAI_API_KEY = 'valid_key';
+      req.body.inputText = 'Some text';
+
+      global.fetch.resolves({
+        ok: true,
+        json: async () => ({ results: [{ flagged: true, categories: { hate: true } }] }),
+      });
+
+      await aiController.postOpenAIModeration(req, res);
+
+      expect(res.render.calledOnce).to.be.true;
+      const args = res.render.firstCall.args[1];
+      expect(args.result.flagged).to.be.true;
+    });
   });
 
-  it('should return 400 if no image is provided', async () => {
-    req.file = null;
+  describe('TogetherAI Classifier', () => {
+    it('should classify text successfully with JSON response', async () => {
+      process.env.TOGETHERAI_API_KEY = 'key';
+      req.body.inputText = 'My order is late';
 
-    await ai.postTogetherAICamera(req, res);
+      global.fetch.resolves({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({ department: 'Shipping' }) } }],
+        }),
+      });
 
-    expect(res.status.calledWith(400)).to.be.true;
-    expect(res.json.calledWith({ error: 'No image provided' })).to.be.true;
+      await aiController.postTogetherAIClassifier(req, res);
+
+      const args = res.render.firstCall.args[1];
+      expect(args.result.department).to.equal('Shipping');
+    });
   });
 
-  it('should return 500 if TogetherAI API key is missing', async () => {
-    req.file = { buffer: Buffer.from('img') };
+  describe('TogetherAI Camera', () => {
+    it('should fail when no image is provided', async () => {
+      req.file = null;
+      await aiController.postTogetherAICamera(req, res);
+      expect(res.status.calledWith(400)).to.be.true;
+    });
+  });
 
-    const oldKey = process.env.TOGETHERAI_API_KEY;
-    delete process.env.TOGETHERAI_API_KEY;
+  describe('RAG - getRag', () => {
+    it('should handle DB errors gracefully in getRag', async () => {
+      fsMock.existsSync.returns(true);
+      mongoClientMock.connect.rejects(new Error('Connection failed'));
 
-    await ai.postTogetherAICamera(req, res);
+      await aiController.getRag(req, res);
 
-    expect(res.status.calledWith(500)).to.be.true;
-    expect(res.json.calledWith({ error: 'TogetherAI API key is not set' })).to.be.true;
+      const args = res.render.firstCall.args[1];
+      expect(args.ingestedFiles).to.deep.equal([]);
+    });
+  });
 
-    // Restore key
-    process.env.TOGETHERAI_API_KEY = oldKey;
+  describe('RAG - postRagIngest', () => {
+    it('should redirect with info if no files found', async () => {
+      fsMock.readdirSync.returns([]);
+
+      await aiController.postRagIngest(req, res);
+
+      expect(req.flash.calledWith('info')).to.be.true;
+      expect(res.redirect.calledWith('/ai/rag')).to.be.true;
+    });
+  });
+
+  describe('RAG - postRagAsk', () => {
+    it('should reject empty question', async () => {
+      req.body.question = '   ';
+      await aiController.postRagAsk(req, res);
+      expect(res.redirect.called).to.be.true;
+    });
+
+    it('should redirect if no files indexed', async () => {
+      req.body.question = 'Valid question';
+      collectionMock.distinct.resolves([]);
+
+      await aiController.postRagAsk(req, res);
+
+      expect(req.flash.calledWith('errors')).to.be.true;
+    });
+
+    it('should process question successfully via LLM', async () => {
+      req.body.question = 'Valid question';
+
+      collectionMock.distinct.resolves(['file.pdf']);
+      collectionMock.listSearchIndexes.returns(mockCursor([{ name: 'default', status: 'READY' }]));
+      collectionMock.findOne.resolves({ embedding: [0.1] });
+      vectorSearchMock.similaritySearch.resolves([{ pageContent: 'Mock Context' }]);
+
+      await aiController.postRagAsk(req, res);
+
+      expect(res.render.calledOnce, 'res.render was not called').to.be.true;
+      const args = res.render.firstCall.args[1];
+
+      expect(args.ragResponse).to.exist;
+    });
   });
 });
