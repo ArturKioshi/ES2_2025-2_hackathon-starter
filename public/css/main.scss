@@ -93,3 +93,169 @@
     border: solid #000000;
   }
 }
+
+// Sticky Notes Styles
+#notes-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1500;
+}
+
+.sticky-note {
+  position: fixed;
+  width: 250px;
+  height: 250px;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  cursor: move;
+  pointer-events: auto;
+  z-index: 1501;
+  font-family: 'Comic Sans MS', cursive;
+  color: #111;
+
+  .note-text,
+  .note-header,
+  .note-date,
+  .note-close {
+    color: #111;
+  }
+
+  .note-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 5px;
+
+    .note-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      color: rgba(0, 0, 0, 0.3);
+
+      &:hover {
+        color: rgba(0, 0, 0, 0.6);
+      }
+    }
+  }
+
+  .note-text {
+    flex: 1;
+    border: none;
+    resize: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 0;
+    overflow-y: auto;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  .note-date {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: auto;
+  }
+
+  &.yellow {
+    background: #fef3c7;
+    border: 2px solid #fcd34d;
+    box-shadow: 3px 3px 8px rgba(252, 211, 77, 0.3);
+  }
+
+  &.pink {
+    background: #fce7f3;
+    border: 2px solid #f472b6;
+    box-shadow: 3px 3px 8px rgba(244, 114, 182, 0.3);
+  }
+
+  &.green {
+    background: #dcfce7;
+    border: 2px solid #86efac;
+    box-shadow: 3px 3px 8px rgba(134, 239, 172, 0.3);
+  }
+
+  &.blue {
+    background: #dbeafe;
+    border: 2px solid #60a5fa;
+    box-shadow: 3px 3px 8px rgba(96, 165, 250, 0.3);
+  }
+}
+
+// Preserve sticky-note colors in dark mode
+[data-bs-theme='dark'] {
+  .sticky-note {
+    color: #111 !important;
+
+    .note-text,
+    .note-header,
+    .note-date,
+    .note-close {
+      color: #111 !important;
+    }
+
+    background: #fef3c7;
+    border-color: #fcd34d;
+
+    &.pink {
+      background: #fce7f3 !important;
+      border-color: #f472b6 !important;
+      box-shadow: 3px 3px 8px rgba(244, 114, 182, 0.35);
+    }
+
+    &.green {
+      background: #dcfce7 !important;
+      border-color: #86efac !important;
+      box-shadow: 3px 3px 8px rgba(134, 239, 172, 0.35);
+    }
+
+    &.blue {
+      background: #dbeafe !important;
+      border-color: #60a5fa !important;
+      box-shadow: 3px 3px 8px rgba(96, 165, 250, 0.35);
+    }
+
+    &.yellow {
+      background: #fef3c7 !important;
+      border-color: #fcd34d !important;
+      box-shadow: 3px 3px 8px rgba(252, 211, 77, 0.35);
+    }
+  }
+}
+
+// Footer theme alignment
+footer.bg-light {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+[data-bs-theme='dark'] {
+  footer.bg-light {
+    background-color: #0f172a !important;
+    color: #e5e7eb !important;
+    border-top: 1px solid #1f2937;
+
+    a {
+      color: #cbd5ff !important;
+
+      &:hover,
+      &:focus {
+        color: #e0e7ff !important;
+      }
+    }
+  }
+}
