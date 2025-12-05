@@ -104,7 +104,6 @@ Pontos de Atenção:
 
 - As integrações externas (OAuth) e links de documentação estão plenamente funcionais.
 
-
 ## L - Implementar casos de teste relevantes que melhorem a cobertura de código do projeto original
 
 Foram adicionados dois novos arquivos de teste ao projeto: **`ai.test.js`** e **`api.test.js`**.
@@ -120,12 +119,12 @@ Eles utilizam uma combinação de **Mocha**, **Chai**, **Sinon** e **Proxyquire*
 
 - **Sinon (`stub`, `spy`, `restore`)**
   Fundamental para:
-  - Criar *stubs* de funções globais (como `fetch`).
+  - Criar _stubs_ de funções globais (como `fetch`).
   - Espionar chamadas de métodos.
   - Simular comportamentos de APIs externas sem realizar requisições reais.
 
 - **Proxyquire**
-  Utilizada no controller de IA para injetar *mocks* em dependências importadas via `require`, permitindo testar o código isolando módulos como `fs`, `mongodb` e pacotes do `@langchain`.
+  Utilizada no controller de IA para injetar _mocks_ em dependências importadas via `require`, permitindo testar o código isolando módulos como `fs`, `mongodb` e pacotes do `@langchain`.
 
 ## 2. `ai.test.js` — Testes do Controller de IA
 
@@ -137,8 +136,8 @@ Este arquivo testa as rotas do controller **AI**, com foco pesado na simulação
    - Renderização das páginas: `getAi`, `getOpenAIModeration`, `getTogetherAICamera`, `getTogetherAIClassifier`.
 
 2. **Integrações com LLMs e LangChain (RAG)**
-   - **Ingestão (PostRagIngest):** Simula a leitura de arquivos PDF, *splitting* de texto e salvamento em vetor.
-   - **Busca e Resposta (PostRagAsk):** Testa o fluxo completo de *Retrieval Augmented Generation*:
+   - **Ingestão (PostRagIngest):** Simula a leitura de arquivos PDF, _splitting_ de texto e salvamento em vetor.
+   - **Busca e Resposta (PostRagAsk):** Testa o fluxo completo de _Retrieval Augmented Generation_:
      - Simula conexão com MongoDB Atlas.
      - Simula busca de similaridade vetorial (`vectorSearchMock`).
      - Simula geração de resposta via `ChatTogetherAI`.
@@ -150,6 +149,7 @@ Este arquivo testa as rotas do controller **AI**, com foco pesado na simulação
    - **Input:** Redirecionamento correto ao enviar perguntas vazias no RAG.
 
 ### Técnicas de Mocking:
+
 O teste utiliza `proxyquire` para substituir inteiramente a implementação real do `MongoClient` e das classes do `LangChain`, garantindo que nenhum custo de API ou conexão de banco real ocorra durante os testes.
 
 ## 3. `api.test.js` — Testes do Controller de APIs
@@ -172,10 +172,10 @@ Este arquivo cobre um amplo espectro de integrações externas, manipulando prin
    - **Scraping:** Simula retorno de HTML cru e verifica extração de links.
    - **Foursquare:** Valida o fluxo de busca de locais e tratamento de erros da API.
    - **New York Times:** Testa o parsing de JSON e o tratamento de respostas inesperadas (ex: HTML em vez de JSON).
-   - **Chart:** Verifica o comportamento de *fallback* quando a API de dados financeiros retorna vazio.
+   - **Chart:** Verifica o comportamento de _fallback_ quando a API de dados financeiros retorna vazio.
 
 4. **Upload de Arquivos**
-   - Valida o fluxo de `postFileUpload`, garantindo que mensagens de *flash* (sucesso) sejam acionadas tanto para uploads reais quanto vazios (comportamento do framework).
+   - Valida o fluxo de `postFileUpload`, garantindo que mensagens de _flash_ (sucesso) sejam acionadas tanto para uploads reais quanto vazios (comportamento do framework).
 
 ## 4. Novos Resultados
 
