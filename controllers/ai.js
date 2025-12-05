@@ -715,7 +715,7 @@ exports.postTogetherAIClassifier = async (req, res) => {
       const systemPrompt = messageClassifierSystemPrompt; // Your existing system prompt here
       const apiRequestBody = createClassifierLLMRequestBody(inputText, togetherAiModel, systemPrompt);
       const data = await callTogetherAiApi(apiRequestBody, togetherAiKey);
-      const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      const content = data?.choices?.[0]?.message?.content;
       const department = extractClassifierResponse(content);
       result = {
         department,
