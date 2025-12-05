@@ -109,7 +109,6 @@ Pontos de Atenção:
 Foram adicionados dois novos arquivos de teste ao projeto: **`ai.test.js`** e **`api.test.js`**.  
 Eles utilizam principalmente **Mocha**, **Chai** e **Sinon** para construir testes unitários dos controllers do sistema.
 
-
 ## 1. Bibliotecas Utilizadas
 
 - **Mocha (`describe`, `it`)**  
@@ -120,10 +119,9 @@ Eles utilizam principalmente **Mocha**, **Chai** e **Sinon** para construir test
 
 - **Sinon (`stub`, `spy`, `restore`)**  
   Usada para:
-  - Criar *mocks* e *stubs* de funções,
+  - Criar _mocks_ e _stubs_ de funções,
   - Simular comportamentos de APIs externas,
   - Substituir dependências como `fetch`, `stripe`, etc.
-
 
 ## 2. `ai.test.js` — Testes do Controller de IA
 
@@ -158,7 +156,6 @@ Este arquivo testa todas as principais rotas do controller **AI**, incluindo pá
 - Se redirecionamentos são feitos no fluxo certo.
 - Se mensagens de flash são exibidas quando necessário.
 
-
 ## 3. `api.test.js` — Testes do Controller de APIs
 
 Este arquivo cobre todas as rotas relacionadas às APIs gerais do sistema, incluindo Stripe, Twilio, Upload e Scraping.
@@ -175,10 +172,8 @@ Este arquivo cobre todas as rotas relacionadas às APIs gerais do sistema, inclu
    - `postFileUpload()`  
      — Testa tanto upload real quanto upload vazio (flash de sucesso em ambos os casos).
 
-
 3. **Steam API**
    Usa `sinon.stub(global, 'fetch')` para simular todas chamadas à API da Steam:
-
    - Busca de jogos recentes
    - Busca de conquistas
    - Dados do perfil do usuário
@@ -202,7 +197,6 @@ A cobertura global atual é de aproximadamente **40.97%** nas instruções.
 
 **2. Detalhamento: Controllers**
 
-
 ![Cobertura Controllers](images-readme/controllers_new.png)
 
 **3. Detalhamento: Config**
@@ -213,10 +207,10 @@ A cobertura global atual é de aproximadamente **40.97%** nas instruções.
 
 Os arquivos **`ai.test.js`** e **`api.test.js`**:
 
-- Aumentam a cobertura de testes do projeto.  
-- Garantem que as rotas dos controllers continuam funcionando mesmo com mudanças internas.  
-- Simulam chamadas a APIs externas (OpenAI, TogetherAI, Steam, Stripe, etc).  
-- Validam corretamente erros, fluxos normais e cenários inesperados.  
-- Usam *stubs*, *mocks*, e inspeção de chamadas para assegurar que a aplicação responde como esperado.
+- Aumentam a cobertura de testes do projeto.
+- Garantem que as rotas dos controllers continuam funcionando mesmo com mudanças internas.
+- Simulam chamadas a APIs externas (OpenAI, TogetherAI, Steam, Stripe, etc).
+- Validam corretamente erros, fluxos normais e cenários inesperados.
+- Usam _stubs_, _mocks_, e inspeção de chamadas para assegurar que a aplicação responde como esperado.
 
 Eles representam a base de um conjunto robusto de testes unitários para controllers de aplicações Node.js.
